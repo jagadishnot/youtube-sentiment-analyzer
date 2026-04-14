@@ -7,7 +7,7 @@ import re
 app = Flask(__name__)
 CORS(app)
 
-# 🔥 HuggingFace API (NO local model)
+# 🔥 HuggingFace API
 HF_API_URL = "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english"
 
 headers = {
@@ -27,14 +27,24 @@ def clean_text(text):
     return text[:512]
 
 
-# 🔥 Call HuggingFace API
+# 🔥 SAFE HF API CALL
 def analyze_texts(texts):
     response = requests.post(
         HF_API_URL,
         headers=headers,
         json={"inputs": texts}
     )
-    return response.json()
+
+    data = response.json()
+
+    # 🔥 HANDLE ALL ERROR CASES
+    if isinstance(data, dict):
+        if "error" in data:
+            raise Exception(f"HuggingFace Error: {data['error']}")
+        if "estimated_time" in data:
+            raise Exception("Model is loading, try again in few seconds")
+
+    return data
 
 
 # ✅ Generate AI summary
@@ -74,7 +84,7 @@ def analyze():
 
         cleaned = [clean_text(t) for t in texts]
 
-        # 🔥 Call HF API
+        # 🔥 CALL HF API
         raw_results = analyze_texts(cleaned)
 
         results = []
@@ -85,9 +95,16 @@ def analyze():
             if isinstance(item, list):
                 item = item[0]
 
+            # 🔥 SAFETY CHECK
+            if not isinstance(item, dict):
+                continue
+
+            if "label" not in item:
+                continue
+
             label_raw = item["label"]
             label = LABEL_MAP.get(label_raw, "neutral")
-            score = round(item["score"], 4)
+            score = round(item.get("score", 0), 4)
 
             results.append({"label": label, "score": score})
 
@@ -96,11 +113,14 @@ def analyze():
 
         total = len(results)
 
+        if total == 0:
+            return jsonify({"error": "No valid results from model"}), 500
+
         pos_pct = (counts["positive"] / total) * 100
         neg_pct = (counts["negative"] / total) * 100
         neu_pct = (counts["neutral"] / total) * 100
 
-        # Get best comments
+        # 🔥 Best comments
         pos_indices = [i for i, r in enumerate(results) if r["label"] == "positive"]
         neg_indices = [i for i, r in enumerate(results) if r["label"] == "negative"]
 
@@ -144,6 +164,7 @@ def analyze():
         })
 
     except Exception as e:
+        print("ERROR:", str(e))  # 👈 helps debugging in Render logs
         return jsonify({"error": str(e)}), 500
 
 
