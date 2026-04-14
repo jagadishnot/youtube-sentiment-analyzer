@@ -1,40 +1,76 @@
-import { Bar } from "react-chartjs-2";
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from "chart.js";
+import React from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
-// Register chart elements
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
+function SentimentChart({ summary }) {
+  if (!summary) return null;
 
-const SentimentChart = ({ data }) => {
-  const counts = { positive: 0, negative: 0, neutral: 0 };
+  const pieData = [
+    { name: 'Positive', value: summary.positivePct },
+    { name: 'Neutral', value: summary.neutralPct },
+    { name: 'Negative', value: summary.negativePct },
+  ];
 
-  if (Array.isArray(data)) {
-    data.forEach((c) => {
-      if (c.score > 0) counts.positive++;
-      else if (c.score < 0) counts.negative++;
-      else counts.neutral++;
-    });
-  }
+  const barData = [
+    { name: 'Positive', value: summary.positive },
+    { name: 'Neutral', value: summary.neutral },
+    { name: 'Negative', value: summary.negative },
+  ];
 
-  const chartData = {
-    labels: ["Positive 😀", "Negative 😡", "Neutral 😐"],
-    datasets: [
-      {
-        label: "Feedback Sentiment",
-        data: [counts.positive, counts.negative, counts.neutral],
-        backgroundColor: ["#4CAF50", "#F44336", "#FFC107"],
-      },
-    ],
-  };
+  const COLORS = ['#22c55e', '#eab308', '#ef4444'];
 
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: { display: false },
-      title: { display: true, text: "Sentiment Analysis Results" },
-    },
-  };
+  return (
+    <div>
+      {/* 🔥 PIE CHART */}
+      <div style={{ width: '100%', height: 250 }}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={pieData}
+              dataKey="value"
+              outerRadius={80}
+              animationDuration={800}
+              label
+            >
+              {pieData.map((entry, index) => (
+                <Cell key={index} fill={COLORS[index]} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
 
-  return <Bar data={chartData} options={options} />;
-};
+      {/* 📊 BAR CHART */}
+      <div style={{ width: '100%', height: 250 }}>
+        <ResponsiveContainer>
+          <BarChart data={barData}>
+            <XAxis dataKey="name" stroke="#ccc" />
+            <YAxis />
+            <Tooltip />
+            <Bar
+              dataKey="value"
+              fill="#6366f1"
+              radius={[8, 8, 0, 0]}
+              animationDuration={800}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 🧠 Summary */}
+      <p className="video-desc">{summary.overallFeedback}</p>
+    </div>
+  );
+}
 
 export default SentimentChart;

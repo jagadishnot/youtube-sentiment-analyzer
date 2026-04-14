@@ -1,61 +1,161 @@
-import { useState } from "react";
-import axios from "axios";
-import SentimentChart from "./components/SentimentChart";
+import React, { useState } from 'react';
+import VideoInput from './components/VideoInput';
+import VideoInfo from './components/VideoInfo';
+import SentimentChart from './components/SentimentChart';
+import CommentList from './components/CommentList';
+import AIInsights from './components/AIInsights';
+import './App.css';
 
 function App() {
-  const [comment, setComment] = useState("");
-  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState(null);
 
-  const handleSubmit = async () => {
-    if (!comment.trim()) return;
+  const handleAnalyze = async (url) => {
+    setLoading(true);
+    setError('');
+    setResult(null);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/comment", { text: comment });
-      console.log("Response:", res.data); // ✅ Debugging
-      setResults([...results, res.data]);
-      setComment("");
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+
+      setResult(data);
     } catch (err) {
-      console.error("Error:", err);
-      alert("Failed to analyze comment");
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
-      <h2>📝 Feedback Sentiment Analyzer</h2>
+    <div className="app-container">
 
-      <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        rows="4"
-        style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
-        placeholder="Type your feedback here..."
-      />
+      {/* 🔥 HEADER */}
+      <header className="app-header">
+        <h1 className="app-title">
+          🎥 YouTube Sentiment Analyzer
+        </h1>
+        <p className="app-subtitle">
+          Analyze audience reactions, detect sentiment, and uncover insights instantly.
+        </p>
+      </header>
 
-      <button
-        onClick={handleSubmit}
-        style={{
-          padding: "10px 15px",
-          backgroundColor: "#1976D2",
-          color: "#fff",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        Submit
-      </button>
+      {/* 🔍 INPUT */}
+      <div className="glass-card">
+        <VideoInput onAnalyze={handleAnalyze} loading={loading} />
+      </div>
 
-      <h3 style={{ marginTop: "20px" }}>📊 Sentiment Chart</h3>
-      <SentimentChart data={results} />
+      {/* ⏳ LOADING */}
+      {loading && (
+        <div className="loading-box">
+          🚀 Fetching video data & analyzing comments...
+        </div>
+      )}
 
-      <h3 style={{ marginTop: "20px" }}>📋 Submitted Feedback</h3>
-      <ul>
-        {results.map((r, i) => (
-          <li key={i}>
-            <strong>{r.text}</strong> → Score: {r.score}
-          </li>
-        ))}
-      </ul>
+      {/* ❌ ERROR */}
+      {error && (
+        <div className="error-box">
+          ⚠️ {error}
+        </div>
+      )}
+
+      {/* ✅ RESULT */}
+      {result && (
+        <>
+          {/* 🎥 VIDEO PLAYER */}
+          <div className="glass-card video-player-card">
+            <iframe
+              width="100%"
+              height="400"
+              src={`https://www.youtube.com/embed/${result.videoMeta.videoId}`}
+              title="YouTube video player"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="video-player"
+            ></iframe>
+          </div>
+
+          {/* 🎬 VIDEO INFO */}
+          <div className="glass-card">
+            <VideoInfo meta={result.videoMeta} />
+          </div>
+
+          {/* 📊 SENTIMENT + AI */}
+          <div className="glass-card">
+            <h3 className="section-title">📊 Sentiment Analysis</h3>
+
+            <SentimentChart
+              summary={result.sentimentSummary}
+              comments={result.comments}
+            />
+
+            {/* 🤖 AI INSIGHTS */}
+            <AIInsights summary={result.sentimentSummary} />
+
+            {result.message && (
+              <p className="info-text">{result.message}</p>
+            )}
+          </div>
+
+          {/* 💬 COMMENTS */}
+          {result.comments.length > 0 && (
+            <div className="glass-card">
+              <h3 className="section-title">
+                💬 Comments ({result.comments.length})
+              </h3>
+
+              <CommentList comments={result.comments} />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 👤 FOOTER (PERSONAL BRANDING) */}
+      <footer className="app-footer">
+        <div className="footer-content">
+          <h3>✨ Built with ❤️ by Jagadish Gow</h3>
+
+          <p>
+            🚀 Full Stack Developer | AI Enthusiast
+          </p>
+
+          <div className="footer-links">
+            <a
+              href="https://www.instagram.com/jagad.ish07?igsh=ZWFpYmtoaDFnaGtq"
+              target="_blank"
+              rel="noreferrer"
+            >
+              📸 Instagram
+            </a>
+
+            <a
+              href="https://github.com/jagadishnot"
+              target="_blank"
+              rel="noreferrer"
+            >
+              💻 GitHub
+            </a>
+
+            <a
+              href="https://linkedin.com/in/YOUR_LINKEDIN"
+              target="_blank"
+              rel="noreferrer"
+            >
+              🔗 LinkedIn
+            </a>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }

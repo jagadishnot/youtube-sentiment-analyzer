@@ -1,34 +1,34 @@
-// server/index.js
-import express from "express";
-import cors from "cors";
-import Sentiment from "sentiment";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+dotenv.config();
+
+import analyzeRoute from './routes/analyze.js';
+
+
 
 const app = express();
+
+/* MIDDLEWARE */
 app.use(cors());
 app.use(express.json());
 
-const sentiment = new Sentiment();
+/* ROUTES */
+app.use('/api/analyze', analyzeRoute);
 
-// API route
-app.post("/api/comment", (req, res) => {
-  try {
-    const { text } = req.body;
-
-    if (!text || text.trim() === "") {
-      return res.status(400).json({ error: "Comment text is required" });
-    }
-
-    const result = sentiment.analyze(text);
-
-    res.json({
-      text,
-      score: result.score,         // sentiment score (-ve, +ve, 0)
-      comparative: result.comparative,
-      tokens: result.tokens,
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
+/* HEALTH CHECK */
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Server running 🚀' });
 });
 
-app.listen(5000, () => console.log("✅ Server running on http://localhost:5000"));
+/* ROOT */
+app.get('/', (req, res) => {
+  res.send('🚀 YouTube Sentiment Analyzer API running');
+});
+
+/* START */
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
