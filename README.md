@@ -24,4 +24,4 @@ AI-powered web application that analyzes YouTube comments to understand audience
 
 ## 👨‍💻 Author
 Jagadish Gow  
-📸 Instagram: https://instagram.com/YOUR_ID
+📸 Instagram: https://www.instagram.com/jagad.ish07?igsh=ZWFpYmtoaDFnaGtq
