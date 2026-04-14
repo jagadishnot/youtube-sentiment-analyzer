@@ -1,25 +1,22 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from transformers import pipeline
+import requests
+import os
 import re
 
 app = Flask(__name__)
 CORS(app)
 
-# Load sentiment model
-sentiment_pipeline = pipeline(
-    "sentiment-analysis",
-    truncation=True,
-    max_length=128
-)
+# 🔥 HuggingFace API (NO local model)
+HF_API_URL = "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english"
+
+headers = {
+    "Authorization": f"Bearer {os.getenv('HF_TOKEN')}"
+}
 
 LABEL_MAP = {
-    "positive": "positive",
-    "negative": "negative",
-    "neutral": "neutral",
-    "label_0": "negative",
-    "label_1": "neutral",
-    "label_2": "positive",
+    "POSITIVE": "positive",
+    "NEGATIVE": "negative"
 }
 
 
@@ -28,6 +25,16 @@ def clean_text(text):
     text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text[:512]
+
+
+# 🔥 Call HuggingFace API
+def analyze_texts(texts):
+    response = requests.post(
+        HF_API_URL,
+        headers=headers,
+        json={"inputs": texts}
+    )
+    return response.json()
 
 
 # ✅ Generate AI summary
@@ -67,8 +74,8 @@ def analyze():
 
         cleaned = [clean_text(t) for t in texts]
 
-        # Batch prediction
-        raw_results = sentiment_pipeline(cleaned, batch_size=32)
+        # 🔥 Call HF API
+        raw_results = analyze_texts(cleaned)
 
         results = []
         counts = {"positive": 0, "negative": 0, "neutral": 0}
@@ -78,7 +85,8 @@ def analyze():
             if isinstance(item, list):
                 item = item[0]
 
-            label = LABEL_MAP.get(item["label"].lower(), item["label"].lower())
+            label_raw = item["label"]
+            label = LABEL_MAP.get(label_raw, "neutral")
             score = round(item["score"], 4)
 
             results.append({"label": label, "score": score})
@@ -111,7 +119,6 @@ def analyze():
             pos_pct, neg_pct, neu_pct, top_positive, top_negative
         )
 
-        # Safe average calculation
         avg_positive_score = round(
             sum(scores["positive"]) / len(scores["positive"]),
             3
