@@ -9,10 +9,8 @@ CORS(app)
 # Load sentiment model
 sentiment_pipeline = pipeline(
     "sentiment-analysis",
-    model="cardiffnlp/twitter-roberta-base-sentiment-latest",
-    top_k=1,
     truncation=True,
-    max_length=128,
+    max_length=128
 )
 
 LABEL_MAP = {
