@@ -1,50 +1,28 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import requests
-import os
+from transformers import pipeline
 import re
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# 🔥 HuggingFace API
-HF_API_URL = "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english"
-
-headers = {
-    "Authorization": f"Bearer {os.getenv('HF_TOKEN')}"
-}
+# 🔥 LIGHTWEIGHT MODEL (WORKS ON RENDER FREE)
+sentiment_pipeline = pipeline(
+    "sentiment-analysis",
+    model="sshleifer/tiny-distilbert-base-uncased-finetuned-sst-2-english"
+)
 
 LABEL_MAP = {
     "POSITIVE": "positive",
     "NEGATIVE": "negative"
 }
 
-
 # ✅ Clean text
 def clean_text(text):
     text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
-    return text[:512]
-
-
-# 🔥 SAFE HF API CALL
-def analyze_texts(texts):
-    response = requests.post(
-        HF_API_URL,
-        headers=headers,
-        json={"inputs": texts}
-    )
-
-    data = response.json()
-
-    # 🔥 HANDLE ALL ERROR CASES
-    if isinstance(data, dict):
-        if "error" in data:
-            raise Exception(f"HuggingFace Error: {data['error']}")
-        if "estimated_time" in data:
-            raise Exception("Model is loading, try again in few seconds")
-
-    return data
+    return text[:128]  # 🔥 reduce memory
 
 
 # ✅ Generate AI summary
@@ -84,27 +62,16 @@ def analyze():
 
         cleaned = [clean_text(t) for t in texts]
 
-        # 🔥 CALL HF API
-        raw_results = analyze_texts(cleaned)
+        # 🔥 LOCAL MODEL (NO API)
+        raw_results = sentiment_pipeline(cleaned, batch_size=4)
 
         results = []
         counts = {"positive": 0, "negative": 0, "neutral": 0}
         scores = {"positive": [], "negative": [], "neutral": []}
 
         for item in raw_results:
-            if isinstance(item, list):
-                item = item[0]
-
-            # 🔥 SAFETY CHECK
-            if not isinstance(item, dict):
-                continue
-
-            if "label" not in item:
-                continue
-
-            label_raw = item["label"]
-            label = LABEL_MAP.get(label_raw, "neutral")
-            score = round(item.get("score", 0), 4)
+            label = LABEL_MAP.get(item["label"], "neutral")
+            score = round(item["score"], 4)
 
             results.append({"label": label, "score": score})
 
@@ -112,9 +79,6 @@ def analyze():
             scores[label].append(score)
 
         total = len(results)
-
-        if total == 0:
-            return jsonify({"error": "No valid results from model"}), 500
 
         pos_pct = (counts["positive"] / total) * 100
         neg_pct = (counts["negative"] / total) * 100
@@ -139,11 +103,6 @@ def analyze():
             pos_pct, neg_pct, neu_pct, top_positive, top_negative
         )
 
-        avg_positive_score = round(
-            sum(scores["positive"]) / len(scores["positive"]),
-            3
-        ) if scores["positive"] else 0
-
         summary = {
             "total": total,
             "positive": counts["positive"],
@@ -152,7 +111,6 @@ def analyze():
             "positivePct": round(pos_pct, 1),
             "negativePct": round(neg_pct, 1),
             "neutralPct": round(neu_pct, 1),
-            "avgPositiveScore": avg_positive_score,
             "overallFeedback": overall_feedback,
             "topPositiveComment": top_positive,
             "topNegativeComment": top_negative,
@@ -164,16 +122,23 @@ def analyze():
         })
 
     except Exception as e:
-        print("ERROR:", str(e))  # 👈 helps debugging in Render logs
+        print("ERROR:", str(e))
         return jsonify({"error": str(e)}), 500
 
 
-# ✅ Health check
-@app.route("/health", methods=["GET"])
+# ✅ HEALTH CHECK
+@app.route("/health")
 def health():
     return jsonify({"status": "ok"})
 
 
-# ✅ Run server
+# ✅ ROOT
+@app.route("/")
+def home():
+    return "🚀 YouTube Sentiment Analyzer ML Service Running"
+
+
+# ✅ RUN (RENDER COMPATIBLE)
 if __name__ == "__main__":
-    app.run(port=5001, debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
