@@ -8,16 +8,23 @@ CORS(app)
 
 # 🔥 SIMPLE KEYWORD-BASED SENTIMENT (LIGHTWEIGHT)
 
+# 🔥 POSITIVE WORDS
 positive_words = [
-    "good", "great", "awesome", "amazing", "love",
-    "excellent", "nice", "best", "fantastic", "super"
+    "good", "great", "awesome", "amazing", "love", "excellent",
+    "nice", "best", "fantastic", "super", "cool", "wonderful",
+    "brilliant", "perfect", "liked", "enjoyed", "impressive",
+    "outstanding", "beautiful", "incredible", "masterpiece",
+    "fire", "lit", "goosebumps", "mind blowing"
 ]
 
+# 🔥 NEGATIVE WORDS
 negative_words = [
-    "bad", "worst", "hate", "terrible", "awful",
-    "boring", "poor", "useless", "disappointing"
+    "bad", "worst", "hate", "terrible", "awful", "boring",
+    "poor", "useless", "disappointing", "waste", "cringe",
+    "annoying", "pathetic", "trash", "slow", "cheap",
+    "fake", "overrated", "underwhelming", "mess",
+    "not good", "not nice", "not worth"
 ]
-
 
 def analyze_text(text):
     text = text.lower()
