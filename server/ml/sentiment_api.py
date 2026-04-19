@@ -7,11 +7,8 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# 🔥 LIGHTWEIGHT MODEL (WORKS ON RENDER FREE)
-sentiment_pipeline = pipeline(
-    "sentiment-analysis",
-    model="sshleifer/tiny-distilbert-base-uncased-finetuned-sst-2-english"
-)
+# 🔥 FINAL FIX → USE DEFAULT MODEL (STABLE)
+sentiment_pipeline = pipeline("sentiment-analysis")
 
 LABEL_MAP = {
     "POSITIVE": "positive",
@@ -22,7 +19,7 @@ LABEL_MAP = {
 def clean_text(text):
     text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
-    return text[:128]  # 🔥 reduce memory
+    return text[:128]  # reduce memory
 
 
 # ✅ Generate AI summary
@@ -62,8 +59,8 @@ def analyze():
 
         cleaned = [clean_text(t) for t in texts]
 
-        # 🔥 LOCAL MODEL (NO API)
-        raw_results = sentiment_pipeline(cleaned, batch_size=4)
+        # 🔥 MODEL CALL (SAFE)
+        raw_results = sentiment_pipeline(cleaned, batch_size=2)
 
         results = []
         counts = {"positive": 0, "negative": 0, "neutral": 0}
